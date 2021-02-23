@@ -1,0 +1,8 @@
+[mysqld]
+server-id = 1
+log-bin = mysql-bin
+binlog_format = row
+binlog_do_db            = mqtt_auth
+gtid_mode=on
+enforce-gtid-consistency=ON
+log-slave-updates

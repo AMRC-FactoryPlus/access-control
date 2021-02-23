@@ -1,0 +1,67 @@
+version: '3.7'
+services:
+  mysql_db_container:
+    image: mysql:latest
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_central_root-password  
+    ports:
+      - target: 3306
+        published: 3306
+        protocol: tcp
+        mode: host
+      - target: 33060
+        published: 33060
+        protocol: tcp
+        mode: host
+    volumes:
+      - mysql_db_data_container:/var/lib/mysql
+      - ./conf:/etc/mysql/conf.d
+      - /etc/ssl/:/etc/mysql/certs/
+    networks:
+      - factory-plus
+    secrets:
+      - mysql_central_root-password
+    environment:
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_central_root-password
+    deploy:
+      placement:
+        constraints:
+          - node.hostname == amrc-factoryP-1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+
+  mysqld_exporter:
+    image: prom/mysqld-exporter:latest
+    user: root
+    entrypoint:
+        - mysqld_exporter
+        - --config.my-cnf=/run/secrets/mysql_central_exporter-password
+    secrets:
+      - mysql_central_exporter-password
+    deploy:
+      labels:
+        - "prometheus-job=mysql-central"
+        - "prometheus-port=9104"
+      placement:
+        constraints:
+          - node.hostname == amrc-factoryP-1
+    networks:
+      - factory-plus
+    depends_on:
+      - mysql_db_container
+
+secrets:
+  mysql_central_root-password:
+    external: true
+  mysql_central_exporter-password:
+    external: true
+
+volumes:
+  mysql_db_data_container:
+
+networks:
+  factory-plus:
+    external: true
+    name: factory-plus
